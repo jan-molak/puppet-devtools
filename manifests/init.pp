@@ -17,43 +17,92 @@
 #  }
 
 class devtools(
-  $ide = 'UNSET',
+  $ide = [],
   $packages = []
 ) {
+  # that's a bit of a nasty hack to compensate for a lack of a simple foreach loop :/
+  ide     { $ide: }
   package { $packages: ensure => present; }
 
-  case $ide {
-    intellij: { install_intellij { '12.0.1': } }
-    eclipse: {
-      fail("Sorry, I haven't implemented eclipse support yet :( Stay tuned!")
+
+  # helper types
+
+  define ide() {
+    $ide = split($name, ' ')
+
+    $ide_name    = $ide[0]
+    $ide_version = $ide[1]
+
+    case $ide_name {
+      intellij: { ide_intellij { $ide_version: } }
+      eclipse:  { ide_eclipse  { $ide_version: } }
     }
   }
 
-  define install_intellij() {
+  # juno-SR1
+  define ide_eclipse() {
+    # this assumes that the version is something like "juno-SR1"; might need to be revisited later
+    $version = split($name, "-")
+
+    $downloadable = "eclipse-jee-${version[0]}-${version[1]}-linux-gtk-x86_64.tar.gz"
+    $site          = "http://eclipse.yatta.de/technology/epp/downloads/release/${version[0]}/${version[1]}"
+
+    install_ide { 'Eclipse':
+      downloadable    => $downloadable,
+      site            => $site,
+      executable_path => '',
+      executable_name => 'eclipse',
+      symlink_name    => 'eclipse'
+    }
+  }
+
+  define ide_intellij() {
     $downloadable = "ideaIU-${name}.tar.gz"
+    $site         = "http://download.jetbrains.com/idea"
+
+    install_ide { 'IntelliJ':
+      downloadable    => $downloadable,
+      site            => $site,
+      executable_path => 'bin',
+      executable_name => 'idea.sh',
+      symlink_name    => 'idea'
+    }
+  }
+
+  define install_ide(
+    $downloadable    = 'UNSET',
+    $site            = 'UNSET',
+    $executable_path = '',
+    $executable_name = 'UNSET',
+    $symlink_name    = 'UNSET'
+  ) {
     $temp_dir     = "/tmp"
     $install_dir  = "/opt"
 
-    download_file { $downloadable: site => "http://download.jetbrains.com/idea", cwd => $temp_dir }
+    $ide_dir_file_name = "${name}_dir"
 
-    exec { "Get IntelliJ dir name":
-      command => "tar -ztf ${downloadable} | grep -o -E '^[-A-Za-z0-9\\._]+' | uniq > ${temp_dir}/intellij_dir",
+    $executable   = join([$executable_path, $executable_name], "/")
+
+    download_file { $downloadable: site => $site, cwd => $temp_dir }
+
+    exec { "Get ${name} dir name":
+      command => "tar -ztf ${downloadable} | grep -o -E '^[-A-Za-z0-9\\._]+' | uniq > ${temp_dir}/${ide_dir_file_name}",
       cwd     => $temp_dir,
-      creates => "${temp_dir}/intellij_dir",
+      creates => "${temp_dir}/${ide_dir_file_name}",
       require => Download_file[$downloadable]
     }
 
-    exec { "Untar IntelliJ":
+    exec { "Untar ${name}":
       command => "tar xfz ${temp_dir}/${downloadable}",
       cwd     => "${install_dir}",
-      require => Exec['Get IntelliJ dir name'],
-      unless  => "ls `cat ${temp_dir}/intellij_dir` 2>/dev/null"
+      require => Exec["Get ${name} dir name"],
+      unless  => "ls `cat ${temp_dir}/${ide_dir_file_name}` 2>/dev/null"
     }
 
-    exec { "Link the IntelliJ binary":
-      command => "ln -s ${install_dir}/`cat ${temp_dir}/intellij_dir`/bin/idea.sh /usr/local/bin/idea",
-      require => Exec['Untar IntelliJ'],
-      creates => "/usr/local/bin/idea"
+    exec { "Link the ${name} binary":
+      command => "ln -s ${install_dir}/`cat ${temp_dir}/${ide_dir_file_name}`/${executable} /usr/local/bin/${symlink_name}",
+      require => Exec["Untar ${name}"],
+      creates => "/usr/local/bin/${symlink_name}"
     }
   }
 
@@ -62,7 +111,8 @@ class devtools(
       command => "wget ${site}/${name}",
       cwd     => $cwd,
       creates => "${cwd}/${name}",
-      user    => $user
+      user    => $user,
+      timeout => 0
     }
   }
 }
