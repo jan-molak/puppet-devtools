@@ -32,6 +32,7 @@ class devtools(
   define install_intellij() {
     $downloadable = "ideaIU-${name}.tar.gz"
     $temp_dir     = "/tmp"
+    $install_dir  = "/opt"
 
     download_file { $downloadable: site => "http://download.jetbrains.com/idea", cwd => $temp_dir }
 
@@ -44,12 +45,13 @@ class devtools(
 
     exec { "Untar IntelliJ":
       command => "tar xfz ${temp_dir}/${downloadable}",
-      cwd     => "/usr/local/lib",
+      cwd     => "${install_dir}",
       require => Exec['Get IntelliJ dir name'],
       unless  => "ls `cat ${temp_dir}/intellij_dir` 2>/dev/null"
     }
 
-    exec { "ln -s /usr/local/lib/`cat ${temp_dir}/intellij_dir`/bin/idea.sh /usr/local/bin/idea":
+    exec { "Link the IntelliJ binary":
+      command => "ln -s ${install_dir}/`cat ${temp_dir}/intellij_dir`/bin/idea.sh /usr/local/bin/idea",
       require => Exec['Untar IntelliJ'],
       creates => "/usr/local/bin/idea"
     }
