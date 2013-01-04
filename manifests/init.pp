@@ -1,10 +1,9 @@
-# Class: java
+# Class: devtools
 #
 # Parameters:
-#   The parameters listed here are not required in general and were
-#     added for use cases related to development environments.
-#   with_maven - whether or not install maven (default: false)
-#   with_ant   - whether or not install ant (default: false)
+#   ide      - the IDE you'd like to use (if any); you can specify a string like "IntelliJ 12.0.1",
+#              or array like [ "IntelliJ 12.0.1", "Eclipse juno-SR1" ] if you want to use both; [] by default
+#   packages - a list of additional packages to install, like [ 'cvs', 'git', 'firefox' ]; [] by default
 # Actions:
 #
 # Requires:
@@ -12,7 +11,7 @@
 #
 # Sample Usage:
 #  class { 'devtools':
-#    ide => 'IntelliJ',
+#    ide => 'IntelliJ 12.0.1',
 #    packages => [ 'cvs' ]
 #  }
 
