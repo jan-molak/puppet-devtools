@@ -75,7 +75,7 @@ class devtools(
     $executable_name = 'UNSET',
     $symlink_name    = 'UNSET'
   ) {
-    $temp_dir     = "/tmp"
+    $temp_dir     = "/var/tmp"
     $install_dir  = "/opt"
 
     $ide_dir_file_name = "${name}_dir"
